@@ -31,6 +31,11 @@ NEWS_API_KEY   = os.getenv("NEWSDATA_API_KEY")
 GROQ_API_KEY   = os.getenv("GROQ_API_KEY")
 FCM_SERVER_KEY = os.getenv("FCM_SERVER_KEY")          # Firebase server key
 client         = Groq(api_key=GROQ_API_KEY)
+if not NEWS_API_KEY:
+    raise ValueError("❌ NEWSDATA_API_KEY missing")
+
+if not GROQ_API_KEY:
+    raise ValueError("❌ GROQ_API_KEY missing")
 
 # ─── paths ─────────────────────────────────────────────────
 BASE_DIR    = Path(__file__).parent
@@ -44,7 +49,7 @@ logging.basicConfig(
     format="%(asctime)s  %(levelname)-8s  %(message)s",
     handlers=[
         logging.StreamHandler(),
-        logging.FileHandler(LOG_DIR / f"run_{datetime.now():%Y-%m-%d}.log"),
+        logging.FileHandler(LOG_DIR / f"run_{datetime.now():%Y-%m-%d}.log", encoding="utf-8"),
     ],
 )
 log = logging.getLogger("pipeline")
@@ -220,7 +225,7 @@ def fetch_news() -> list[dict]:
         r.raise_for_status()
 
         data = r.json()
-        print("DEBUG:", data)   # keep this for now
+        #print("DEBUG:", data)   # keep this for now
 
         articles = data.get("results", [])
         log.info(f"Fetched {len(articles)} raw articles.")
