@@ -100,18 +100,20 @@ def health():
 
 @app.get("/api/news")
 def get_news():
-    """
-    Returns the latest cached digest.
-    Android app calls this on startup and on pull-to-refresh.
-    Fast response (~10ms) — no API calls.
-    """
     cached = load_cache()
-    if not cached:
-        raise HTTPException(
-            status_code=503,
-            detail="No digest available yet. POST /api/refresh to trigger the first run.",
-        )
-    return cached
+
+    # If cache exists → return immediately (fast)
+    if cached:
+        return cached
+
+    # FIRST RUN or after server sleep → auto-generate
+    log.info("No cache found. Running pipeline automatically...")
+    result = run_pipeline()
+
+    # Save cache so next requests are fast
+    save_cache(result)
+
+    return result
 
 
 @app.post("/api/refresh")
