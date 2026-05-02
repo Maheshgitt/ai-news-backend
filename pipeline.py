@@ -413,40 +413,45 @@ def generate_summary(articles: list[dict]) -> str:
 # ══════════════════════════════════════════════════════════
 # FCM PUSH NOTIFICATION
 # ══════════════════════════════════════════════════════════
+from google.oauth2 import service_account
+from google.auth.transport.requests import Request
+
+
+def get_access_token():
+    credentials = service_account.Credentials.from_service_account_file(
+        "/etc/secrets/service-account.json",  # Render path
+        scopes=["https://www.googleapis.com/auth/firebase.messaging"]
+    )
+    credentials.refresh(Request())
+    return credentials.token
+
+
 def send_push_notification(article_count: int):
-    """
-    Sends an FCM push to the 'tech_news' topic after a successful run.
-    All app users subscribed to that topic receive it.
-    """
-    if not FCM_SERVER_KEY:
-        log.warning("FCM_SERVER_KEY not set — skipping push notification.")
-        return
-    payload = {
-        "to": "/topics/tech_news",
-        "notification": {
-            "title": "Today's Tech News is Ready",
-            "body": f"{article_count} new articles — tap to read your daily digest.",
-            "sound": "default",
-        },
-        "data": {
-            "type": "daily_digest",
-            "article_count": str(article_count),
-        },
-    }
     try:
-        r = requests.post(
-            "https://fcm.googleapis.com/fcm/send",
-            json=payload,
-            headers={
-                "Authorization": f"key={FCM_SERVER_KEY}",
-                "Content-Type": "application/json",
-            },
-            timeout=10,
-        )
-        r.raise_for_status()
-        log.info(f"FCM push sent. Response: {r.json()}")
+        access_token = get_access_token()
+
+        url = "https://fcm.googleapis.com/v1/projects/news-agent-eeea9/messages:send"
+
+        payload = {
+            "message": {
+                "topic": "tech_news",
+                "notification": {
+                    "title": "AI Tech News",
+                    "body": f"{article_count} new articles available 🚀"
+                }
+            }
+        }
+
+        headers = {
+            "Authorization": f"Bearer {access_token}",
+            "Content-Type": "application/json",
+        }
+
+        r = requests.post(url, json=payload, headers=headers)
+        print("FCM Response:", r.text)
+
     except Exception as e:
-        log.error(f"FCM push failed: {e}")
+        print("FCM Error:", e)
 
 
 # ══════════════════════════════════════════════════════════
