@@ -135,21 +135,19 @@ def health():
 
 @app.get("/api/news")
 def get_news():
-    """
-    Returns cached digest immediately.
-    If no cache exists, runs pipeline synchronously (first boot only).
-    """
-@app.get("/api/news")
-def get_news():
     history = load_cache()
 
-    # If history exists → return all
-    if history:
+    # If history exists → return it
+    if history and len(history) > 0:
         return history
 
-    # First time → generate
+    # First time → run pipeline
     log.info("No history — running pipeline")
+
     result = run_pipeline()
+
+    print("PIPELINE RESULT:", result)   # DEBUG
+
     save_cache(result)
 
     return [result]
@@ -164,7 +162,11 @@ async def refresh_news(background_tasks: BackgroundTasks):
 
 async def _run_and_cache():
     result = run_pipeline()
+
+    print("PIPELINE RESULT:", result)   # ✅ ADD THIS LINE
+
     save_cache(result)
+
     log.info(f"Manual refresh done. Articles: {result.get('article_count', 0)}")
 
 
@@ -176,9 +178,10 @@ async def chat(req: ChatRequest):
     """
     news_context = ""
     if req.include_news_context:
-        cached = load_cache()
-        if cached and cached.get("summary"):
-            news_context = cached["summary"]
+    cached = load_cache()
+    if cached and len(cached) > 0:
+       latest = cached[-1]
+       news_context = latest.get("summary", "")
 
     messages = [{"role": m.role, "content": m.content} for m in req.messages]
     reply = chat_response(messages, news_context)
